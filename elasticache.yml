@@ -1,0 +1,43 @@
+Description: >
+  This template create an Elasticache Redis node
+
+Parameters:
+  EnvironmentName:
+    Type: String
+
+  Subnets:
+    Type: List<AWS::EC2::Subnet::Id>
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+
+  CacheNodeType:
+    Type: String
+
+Resources:
+  CacheSubnetGroup:
+    Type: "AWS::ElastiCache::SubnetGroup"
+    Properties:
+      CacheSubnetGroupName: !Sub ${EnvironmentName}-cache-subnetgroup
+      Description: Subnet group for redis
+      SubnetIds: !Ref Subnets
+
+  ElasticacheCluster:
+    Type: "AWS::ElastiCache::CacheCluster"
+    Properties:
+      AutoMinorVersionUpgrade: true
+      CacheNodeType: !Ref CacheNodeType
+      Engine: redis
+      NumCacheNodes: 1
+      CacheSubnetGroupName: !Ref CacheSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref SecurityGroup
+      Tags:
+        - Key: EnvironmentName
+          Value: !Ref EnvironmentName
+    DependsOn: CacheSubnetGroup
+
+Outputs:
+    ElasticacheEndpoint:
+        Description: URL of the elasticache node
+        Value: !GetAtt ElasticacheCluster.RedisEndpoint.Address

@@ -1,0 +1,133 @@
+Description: >
+  This template deploys an Auto Scaling Group to the provided VPC and subnets
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+
+  InstanceType:
+    Description: Which instance type should we use to build the ECS cluster?
+    Type: String
+
+  VPC:
+    Description: Choose which VPC this ECS cluster should be deployed to
+    Type: AWS::EC2::VPC::Id
+
+  Subnets:
+    Description: Choose which subnets this ECS cluster should be deployed to
+    Type: List<AWS::EC2::Subnet::Id>
+
+  SecurityGroups:
+    Description: Select the Security Group to use for the ECS cluster hosts
+    Type: List<AWS::EC2::SecurityGroup::Id>
+
+  KeyPair:
+    Description: Amazon EC2 Key Pair
+    Type: "AWS::EC2::KeyPair::KeyName"
+
+  MinSize:
+    Type: Number
+    Description: Minimum number of ECS Instances in the ASG
+
+  MaxSize:
+    Type: Number
+    Description: Maximum number of EC2 Instances in the ASG
+
+  Desired:
+    Type: Number
+    Description: Desired dumber of EC2 Instances in the ASG cannot be less than MinSize
+
+  AMIID:
+    Description: Encrypted AMIID
+    Type: AWS::EC2::Image::Id
+
+  EC2InstanceProfile:
+    Description: The instance profile to use with the launch configuration
+    Type: String
+
+  LoadBalancer:
+    Type: String
+
+Resources:
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier: !Ref Subnets
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MinSize: !Ref MinSize
+      MaxSize: !Ref MaxSize
+      DesiredCapacity: !Ref Desired
+      TerminationPolicies:
+        - Default
+      LoadBalancerNames:
+        - !Ref LoadBalancer
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} Host
+          PropagateAtLaunch: true
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT5M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT5M
+        WaitOnResourceSignals: true
+
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: !Ref AMIID
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPair
+      SecurityGroups: !Ref SecurityGroups
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      BlockDeviceMappings:
+      - DeviceName: "/dev/xvda"
+        Ebs:
+          VolumeSize: "35"
+          VolumeType: "gp2"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          cd /tmp
+          yum update -y
+          yum install -y python-pip
+          pip-2.6 install awscli
+          start amazon-ssm-agent
+          /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchConfiguration
+          /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource AutoScalingGroup
+
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          files:
+            "/etc/cfn/cfn-hup.conf":
+              mode: 000400
+              owner: root
+              group: root
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+            "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.ContainerInstances.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchConfiguration
+          services:
+            sysvinit:
+              cfn-hup:
+                enabled: true
+                ensureRunning: true
+                files:
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+
+Outputs:
+  AutoScalingGroup:
+    Description: A reference to the ASG
+    Value: !Ref AutoScalingGroup

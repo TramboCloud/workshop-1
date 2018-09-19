@@ -1,0 +1,53 @@
+Description: >
+  This template deploys a Classic Load Balancer that exposes ECS services.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+
+  VPC:
+    Type: AWS::EC2::VPC::Id
+
+  PublicSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+
+  SecurityGroups:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+
+  ApplicationPort:
+    Type: String
+
+Resources:
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      LoadBalancerName: !Sub public-${EnvironmentName}
+      Subnets: !Ref PublicSubnets
+      SecurityGroups: !Ref SecurityGroups
+      Scheme: internet-facing
+      Listeners:
+        - LoadBalancerPort: 80
+          InstancePort: !Ref ApplicationPort
+          Protocol: HTTP
+      HealthCheck:
+        Target: !Sub TCP:${ApplicationPort}
+        HealthyThreshold: '3'
+        UnhealthyThreshold: '5'
+        Interval: '90'
+        Timeout: '60'
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-lb
+
+Outputs:
+  LoadBalancer:
+    Description: A reference to the Load Balancer
+    Value: !Ref LoadBalancer
+
+  LoadBalancerUrl:
+    Description: The URL of the LB
+    Value: !GetAtt LoadBalancer.DNSName
+
+  CanonicalHostedZoneID:
+    Description: The ID of the Amazon Route 53 hosted zone associated with the load balancer
+    Value: !GetAtt LoadBalancer.CanonicalHostedZoneNameID
