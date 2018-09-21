@@ -11,7 +11,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       Path: /
-      RoleName: !Sub ${AWS::StackName}-EC2Role-${AWS::Region}
+      RoleName: !Sub ${EnvironmentName}-EC2Role-${AWS::Region}
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM
       AssumeRolePolicyDocument: |

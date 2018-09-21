@@ -32,7 +32,6 @@ Metadata:
     - Label:
         default: Environment configuration
       Parameters:
-      - EnvironmentName
       - ApplicationPort
       - CacheNodeType
       - Ec2InstanceType
@@ -51,8 +50,6 @@ Metadata:
         default: Quick Start S3 Bucket Name
       QSS3KeyPrefix:
         default: Quick Start S3 Key Prefix
-      EnvironmentName:
-        default: The name of the environment, this value will be added as a tag to all the resources.
       ApplicationPort:
         default: The port that the application will use to communicate with the load balancer
       CacheNodeType:
@@ -101,9 +98,6 @@ Parameters:
   AMIID:
     Type: String
     Default: ami-0bbe6b35405ecebdb
-  EnvironmentName:
-    Type: String
-    Default: development
   ApplicationPort:
     Type: String
     Default: 80
@@ -166,7 +160,7 @@ Resources:
       TemplateURL: !Sub https://s3.amazonaws.com/${QSS3BucketName}/${QSS3KeyPrefix}/iam.yml
       TimeoutInMinutes: 20
       Parameters:
-        EnvironmentName:            !Ref EnvironmentName
+        EnvironmentName:            !Ref AWS::StackName
 
   VpcTemplate:
     Type: AWS::CloudFormation::Stack
@@ -174,7 +168,7 @@ Resources:
       TemplateURL: !Sub https://s3.amazonaws.com/${QSS3BucketName}/${QSS3KeyPrefix}/vpc.yml
       TimeoutInMinutes: 20
       Parameters:
-        EnvironmentName:          !Ref EnvironmentName
+        EnvironmentName:          !Ref AWS::StackName
         VpcCIDR:                  !Ref VpcCIDR
         PublicSubnet1CIDR:        !Ref PublicSubnet1CIDR
         PublicSubnet2CIDR:        !Ref PublicSubnet2CIDR
@@ -189,7 +183,7 @@ Resources:
       TemplateURL: !Sub https://s3.amazonaws.com/${QSS3BucketName}/${QSS3KeyPrefix}/securitygroups.yml
       TimeoutInMinutes: 20
       Parameters:
-        EnvironmentName:            !Ref EnvironmentName
+        EnvironmentName:            !Ref AWS::StackName
         VPC:                        !GetAtt VpcTemplate.Outputs.VPC
 
   ElastiCacheTemplate:
@@ -198,7 +192,7 @@ Resources:
       TemplateURL: !Sub https://s3.amazonaws.com/${QSS3BucketName}/${QSS3KeyPrefix}/elasticache.yml
       TimeoutInMinutes: 20
       Parameters:
-        EnvironmentName:            !Ref EnvironmentName
+        EnvironmentName:            !Ref AWS::StackName
         Subnets:                    !Join [ ",", [ !GetAtt VpcTemplate.Outputs.PrivateSubnet1, !GetAtt VpcTemplate.Outputs.PrivateSubnet2 , !GetAtt VpcTemplate.Outputs.PrivateSubnet3 ] ]
         SecurityGroup:              !GetAtt SecurityGroupTemplate.Outputs.ElasticacheSecurityGroup
         CacheNodeType:              !Ref CacheNodeType
@@ -210,7 +204,7 @@ Resources:
       TemplateURL: !Sub https://s3.amazonaws.com/${QSS3BucketName}/${QSS3KeyPrefix}/loadbalancer.yml
       TimeoutInMinutes: 20
       Parameters:
-        EnvironmentName:            !Ref EnvironmentName
+        EnvironmentName:            !Ref AWS::StackName
         VPC:                        !GetAtt VpcTemplate.Outputs.VPC
         PublicSubnets:              !Join [ ",", [ !GetAtt VpcTemplate.Outputs.PublicSubnet1, !GetAtt VpcTemplate.Outputs.PublicSubnet2 , !GetAtt VpcTemplate.Outputs.PublicSubnet3 ] ]
         SecurityGroups:             !Join [ ",", [ !GetAtt SecurityGroupTemplate.Outputs.LoadBalancerSecurityGroup ] ]
@@ -222,7 +216,7 @@ Resources:
       TemplateURL: !Sub https://s3.amazonaws.com/${QSS3BucketName}/${QSS3KeyPrefix}/ec2.yml
       TimeoutInMinutes: 20
       Parameters:
-        EnvironmentName:            !Ref EnvironmentName
+        EnvironmentName:            !Ref AWS::StackName
         InstanceType:               !Ref Ec2InstanceType
         VPC:                        !GetAtt VpcTemplate.Outputs.VPC
         EC2InstanceProfile:         !GetAtt IamTemplate.Outputs.EC2InstanceProfile
