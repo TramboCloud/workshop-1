@@ -27,6 +27,22 @@ Resources:
             }
           }]
         }
+      Policies:
+          - PolicyName: ecs-service
+            PolicyDocument: |
+              {
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                          "elasticloadbalancing:RegisterTargets"
+                      ],
+                      "Resource": [
+                        "*"
+                      ]
+                    }
+                  ]
+              }
 
   EC2InstanceProfile:
     Type: AWS::IAM::InstanceProfile

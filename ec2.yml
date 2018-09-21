@@ -46,7 +46,7 @@ Parameters:
     Description: The instance profile to use with the launch configuration
     Type: String
 
-  LoadBalancer:
+  TargetGroupARN:
     Type: String
 
 Resources:
@@ -60,8 +60,6 @@ Resources:
       DesiredCapacity: !Ref Desired
       TerminationPolicies:
         - Default
-      LoadBalancerNames:
-        - !Ref LoadBalancer
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName} Host
@@ -93,10 +91,11 @@ Resources:
         Fn::Base64: !Sub |
           #!/bin/bash
           cd /tmp
-          yum update -y
-          yum install -y python-pip
-          pip-2.6 install awscli
-          start amazon-ssm-agent
+          apt-get update
+          apt-get install -y python-pip
+          pip install awscli
+          INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+          aws elbv2 register-targets --target-group-arn ${TargetGroupARN} --targets Id=$INSTANCE_ID --region ${AWS::Region}
           /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchConfiguration
           /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource AutoScalingGroup
 
