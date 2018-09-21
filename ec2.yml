@@ -68,7 +68,7 @@ Resources:
           PropagateAtLaunch: true
     CreationPolicy:
       ResourceSignal:
-        Timeout: PT5M
+        Count: 0
     UpdatePolicy:
       AutoScalingRollingUpdate:
         MinInstancesInService: 1

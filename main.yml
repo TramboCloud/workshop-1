@@ -1,0 +1,247 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: Main template for the workshop
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: VPC configuration
+      Parameters:
+      - VpcCIDR
+      - PublicSubnet1CIDR
+      - PublicSubnet2CIDR
+      - PublicSubnet3CIDR
+      - PrivateSubnet1CIDR
+      - PrivateSubnet2CIDR
+      - PrivateSubnet3CIDR
+
+    - Label:
+        default: AWS Quick Start Configuration
+      Parameters:
+      - QSS3BucketName
+      - QSS3KeyPrefix
+
+    - Label:
+        default: AutoScaling configuration
+      Parameters:
+      - MinSize
+      - MaxSize
+      - Desired
+      - AMIID
+
+    - Label:
+        default: Environment configuration
+      Parameters:
+      - EnvironmentName
+      - ApplicationPort
+      - CacheNodeType
+      - Ec2InstanceType
+      - KeyPair
+
+    ParameterLabels:
+      MinSize:
+        default: The Min number of instances for the autoscaling group
+      MaxSize:
+        default: The max number of instnaces on the autoscaling group
+      Desired:
+        default: The desired number of instances on the autoscaling group
+      AMIID:
+        default: The image id that will be used on the auto scaling group
+      QSS3BucketName:
+        default: Quick Start S3 Bucket Name
+      QSS3KeyPrefix:
+        default: Quick Start S3 Key Prefix
+      EnvironmentName:
+        default: The name of the environment, this value will be added as a tag to all the resources.
+      ApplicationPort:
+        default: The port that the application will use to communicate with the load balancer
+      CacheNodeType:
+        default: The node type for the elasticache cluster
+      Ec2InstanceType:
+        default: The instance type for the ec2 fleet
+      KeyPair:
+        default: The keypair to used to connect to the instances
+      VpcCIDR:
+        default: The CIDR for the vpc
+      PublicSubnet1CIDR:
+        default: The CIDR for the public subnet 1
+      PublicSubnet2CIDR:
+        default: The CIDR for the public subnet 2
+      PublicSubnet3CIDR:
+        default: The CIDR for the public subnet 3
+      PrivateSubnet1CIDR:
+        default: The CIDR for the private subnet 1
+      PrivateSubnet2CIDR:
+        default: The CIDR for the private subnet 2
+      PrivateSubnet3CIDR:
+        default: The CIDR for the private subnet 3
+
+  Stack:
+    Value: 0
+  VersionDate:
+    Value: 20160518
+  Identifier:
+    Value: main
+  Input:
+    Description: Input of all required parameters in nested stacks
+  Output:
+    Description: N/A
+
+Parameters:
+
+  MinSize:
+    Type: String
+    Default: 2
+  MaxSize:
+    Type: String
+    Default: 6
+  Desired:
+    Type: String
+    Default: 4
+  AMIID:
+    Type: String
+    Default: ami-0bbe6b35405ecebdb
+  EnvironmentName:
+    Type: String
+    Default: development
+  ApplicationPort:
+    Type: String
+    Default: 80
+  CacheNodeType:
+    Type: String
+    Default: cache.r4.large
+  Ec2InstanceType:
+    Type: String
+    Default: m4.large
+  KeyPair:
+    Type: AWS::EC2::KeyPair::KeyName
+  VpcCIDR:
+    Type: String
+    Default: 172.29.0.0/16
+  PublicSubnet1CIDR:
+    Type: String
+    Default: 172.29.32.0/20
+  PublicSubnet2CIDR:
+    Type: String
+    Default: 172.29.16.0/20
+  PublicSubnet3CIDR:
+    Type: String
+    Default: 172.29.0.0/20
+  PrivateSubnet1CIDR:
+    Type: String
+    Default: 172.29.64.0/20
+  PrivateSubnet2CIDR:
+    Type: String
+    Default: 172.29.128.0/20
+  PrivateSubnet3CIDR:
+    Type: String
+    Default: 172.29.96.0/20
+  QSS3BucketName:
+    AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-.]*[0-9a-zA-Z])*$
+    ConstraintDescription: Quick Start bucket name can include numbers, lowercase
+      letters, uppercase letters, periods (.), and hyphens (-). It cannot start or
+      end with a hyphen (-).
+    Default: trambo-cloud-workshop-1
+    Description: S3 bucket name for the Quick Start assets. Quick Start bucket name
+      can include numbers, lowercase letters, uppercase letters, and hyphens (-).
+      It cannot start or end with a hyphen (-).
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: ^[0-9a-zA-Z-]+(/[0-9a-zA-Z-]+)*$
+    ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
+      uppercase letters, hyphens (-), and forward slash (/). It cannot start or end
+      with forward slash (/) because they are automatically appended.
+    Default: templates
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/). It cannot start or end with forward slash (/) because they
+      are automatically appended.
+    Type: String
+
+Resources:
+
+  IamTemplate:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${QSS3BucketName}/${QSS3KeyPrefix}/iam.yml
+      TimeoutInMinutes: 20
+      Parameters:
+        EnvironmentName:            !Ref EnvironmentName
+
+  VpcTemplate:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${QSS3BucketName}/${QSS3KeyPrefix}/vpc.yml
+      TimeoutInMinutes: 20
+      Parameters:
+        EnvironmentName:          !Ref EnvironmentName
+        VpcCIDR:                  !Ref VpcCIDR
+        PublicSubnet1CIDR:        !Ref PublicSubnet1CIDR
+        PublicSubnet2CIDR:        !Ref PublicSubnet2CIDR
+        PublicSubnet3CIDR:        !Ref PublicSubnet3CIDR
+        PrivateSubnet1CIDR:       !Ref PrivateSubnet1CIDR
+        PrivateSubnet2CIDR:       !Ref PrivateSubnet2CIDR
+        PrivateSubnet3CIDR:       !Ref PrivateSubnet3CIDR
+
+  SecurityGroupTemplate:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${QSS3BucketName}/${QSS3KeyPrefix}/securitygroups.yml
+      TimeoutInMinutes: 20
+      Parameters:
+        EnvironmentName:            !Ref EnvironmentName
+        VPC:                        !GetAtt VpcTemplate.Outputs.VPC
+
+  ElastiCacheTemplate:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${QSS3BucketName}/${QSS3KeyPrefix}/elasticache.yml
+      TimeoutInMinutes: 20
+      Parameters:
+        EnvironmentName:            !Ref EnvironmentName
+        Subnets:                    !Join [ ",", [ !GetAtt VpcTemplate.Outputs.PrivateSubnet1, !GetAtt VpcTemplate.Outputs.PrivateSubnet2 , !GetAtt VpcTemplate.Outputs.PrivateSubnet3 ] ]
+        SecurityGroup:              !GetAtt SecurityGroupTemplate.Outputs.ElasticacheSecurityGroup
+        CacheNodeType:              !Ref CacheNodeType
+
+
+  LoadBalancerTemplate:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${QSS3BucketName}/${QSS3KeyPrefix}/loadbalancer.yml
+      TimeoutInMinutes: 20
+      Parameters:
+        EnvironmentName:            !Ref EnvironmentName
+        VPC:                        !GetAtt VpcTemplate.Outputs.VPC
+        PublicSubnets:              !Join [ ",", [ !GetAtt VpcTemplate.Outputs.PublicSubnet1, !GetAtt VpcTemplate.Outputs.PublicSubnet2 , !GetAtt VpcTemplate.Outputs.PublicSubnet3 ] ]
+        SecurityGroups:             !Join [ ",", [ !GetAtt SecurityGroupTemplate.Outputs.LoadBalancerSecurityGroup ] ]
+        ApplicationPort:            !Ref ApplicationPort
+
+  Ec2Template:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.amazonaws.com/${QSS3BucketName}/${QSS3KeyPrefix}/ec2.yml
+      TimeoutInMinutes: 20
+      Parameters:
+        EnvironmentName:            !Ref EnvironmentName
+        InstanceType:               !Ref Ec2InstanceType
+        VPC:                        !GetAtt VpcTemplate.Outputs.VPC
+        EC2InstanceProfile:         !GetAtt IamTemplate.Outputs.EC2InstanceProfile
+        LoadBalancer:               !GetAtt LoadBalancerTemplate.Outputs.LoadBalancer
+        Subnets:                    !Join [ ",", [ !GetAtt VpcTemplate.Outputs.PrivateSubnet1, !GetAtt VpcTemplate.Outputs.PrivateSubnet2 , !GetAtt VpcTemplate.Outputs.PrivateSubnet3 ] ]
+        SecurityGroups:             !Join [ ",", [ !GetAtt SecurityGroupTemplate.Outputs.EC2SecurityGroup ] ]
+        KeyPair:                    !Ref KeyPair
+        MinSize:                    !Ref MinSize
+        MaxSize:                    !Ref MaxSize
+        Desired:                    !Ref Desired
+        AMIID:                      !Ref AMIID
+
+Outputs:
+  TemplateType:
+    Value: Standard Multi-Tier Web Application
+  TemplateVersion:
+    Value: 2.0
+  Help:
+    Description: For assistance or questions regarding this quickstart please email
+      compliance-accelerator@amazon.com
+    Value: ''
+...
