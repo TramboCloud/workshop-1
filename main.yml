@@ -220,7 +220,6 @@ Resources:
         InstanceType:               !Ref Ec2InstanceType
         VPC:                        !GetAtt VpcTemplate.Outputs.VPC
         EC2InstanceProfile:         !GetAtt IamTemplate.Outputs.EC2InstanceProfile
-        LoadBalancer:               !GetAtt LoadBalancerTemplate.Outputs.LoadBalancer
         Subnets:                    !Join [ ",", [ !GetAtt VpcTemplate.Outputs.PrivateSubnet1, !GetAtt VpcTemplate.Outputs.PrivateSubnet2 , !GetAtt VpcTemplate.Outputs.PrivateSubnet3 ] ]
         SecurityGroups:             !Join [ ",", [ !GetAtt SecurityGroupTemplate.Outputs.EC2SecurityGroup ] ]
         KeyPair:                    !Ref KeyPair
@@ -228,6 +227,7 @@ Resources:
         MaxSize:                    !Ref MaxSize
         Desired:                    !Ref Desired
         AMIID:                      !Ref AMIID
+        TargetGroupARN:             !GetAtt LoadBalancerTemplate.Outputs.TargetGroupARN
 
 Outputs:
   TemplateType:
