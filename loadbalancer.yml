@@ -21,7 +21,7 @@ Resources:
   LoadBalancer:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
     Properties:
-      LoadBalancerName: !Sub public-${EnvironmentName}
+      LoadBalancerName: !Sub public-${AWS::StackName}
       Subnets: !Ref PublicSubnets
       SecurityGroups: !Ref SecurityGroups
       Scheme: internet-facing

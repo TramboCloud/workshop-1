@@ -18,7 +18,7 @@ Resources:
   CacheSubnetGroup:
     Type: "AWS::ElastiCache::SubnetGroup"
     Properties:
-      CacheSubnetGroupName: !Sub ${EnvironmentName}-cache-subnetgroup
+      CacheSubnetGroupName: !Sub ${AWS::StackName}-cache-subnetgroup
       Description: Subnet group for redis
       SubnetIds: !Ref Subnets
 
