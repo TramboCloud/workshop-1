@@ -38,7 +38,7 @@ Resources:
                           "elasticloadbalancing:RegisterTargets"
                       ],
                       "Resource": [
-                        "*",
+                        "*"
                       ]
                     }
                   ]

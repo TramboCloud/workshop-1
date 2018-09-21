@@ -8,15 +8,11 @@ Parameters:
         Description: An environment name that will be prefixed to resource names
         Type: String
 
-    EnvironmentTag:
-        Description: Value for the Environment tag in created resources
-        Type: String
-
     VPC:
         Type: AWS::EC2::VPC::Id
         Description: Choose which VPC the Applicaion Load Balancer should be deployed to
 
-    Subnets:
+    PublicSubnets:
         Description: Choose which subnets the Applicaion Load Balancer should be deployed to
         Type: List<AWS::EC2::Subnet::Id>
 
@@ -24,8 +20,8 @@ Parameters:
         Description: Select the Security Groups to apply to the Applicaion Load Balancer
         Type: List<AWS::EC2::SecurityGroup::Id>
 
-    CertificateArn:
-        Description: The ARN of aws certificate that will be used in LoadBalancer
+    ApplicationPort:
+        Description: The port the app runs in
         Type: String
 
 Resources:
@@ -34,19 +30,28 @@ Resources:
         Type: AWS::ElasticLoadBalancingV2::LoadBalancer
         Properties:
             Name: !Ref EnvironmentName
-            Subnets: !Ref Subnets
+            Subnets: !Ref PublicSubnets
             SecurityGroups: !Ref SecurityGroups
             Tags:
                 - Key: Name
                   Value: !Ref EnvironmentName
-                - Key: Environment
-                  Value: !Ref EnvironmentTag
 
     HttpLoadBalancerListener:
         Type: AWS::ElasticLoadBalancingV2::Listener
         Properties:
             LoadBalancerArn: !Ref LoadBalancer
             Port: 80
+            Protocol: HTTP
+            DefaultActions:
+                - Type: forward
+                  TargetGroupArn: !Ref DefaultTargetGroup
+
+    DefaultTargetGroup:
+        Type: AWS::ElasticLoadBalancingV2::TargetGroup
+        Properties:
+            Name: !Sub ${EnvironmentName}-def
+            VpcId: !Ref VPC
+            Port: !Ref ApplicationPort
             Protocol: HTTP
             TargetGroupAttributes:
               - Key: deregistration_delay.timeout_seconds
@@ -57,17 +62,6 @@ Resources:
                 Value: lb_cookie
               - Key: stickiness.lb_cookie.duration_seconds
                 Value: 300
-            DefaultActions:
-                - Type: forward
-                  TargetGroupArn: !Ref DefaultTargetGroup
-
-    DefaultTargetGroup:
-        Type: AWS::ElasticLoadBalancingV2::TargetGroup
-        Properties:
-            Name: !Sub ${AWS::StackName}-def
-            VpcId: !Ref VPC
-            Port: 80
-            Protocol: HTTP
 
 Outputs:
 
@@ -78,10 +72,6 @@ Outputs:
     LoadBalancerUrl:
         Description: The URL of the ALB
         Value: !GetAtt LoadBalancer.DNSName
-
-    HttpsListener:
-        Description: A reference to a port 443 listener
-        Value: !Ref HttpsLoadBalancerListener
 
     TargetGroupARN:
         Description: The ARN of the target group

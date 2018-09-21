@@ -46,6 +46,9 @@ Parameters:
     Description: The instance profile to use with the launch configuration
     Type: String
 
+  TargetGroupARN:
+    Type: String
+
 Resources:
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -88,11 +91,11 @@ Resources:
         Fn::Base64: !Sub |
           #!/bin/bash
           cd /tmp
-          yum update -y
-          yum install -y python-pip
-          pip-2.6 install awscli
-          aws elbv2 register-targets --target-group-arn ${TargetGroupARN} --targets Id=$INSTANCE_ID
-          start amazon-ssm-agent
+          apt-get update
+          apt-get install -y python-pip
+          pip install awscli
+          INSTANCE_ID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+          aws elbv2 register-targets --target-group-arn ${TargetGroupARN} --targets Id=$INSTANCE_ID --region ${AWS::Region}
           /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchConfiguration
           /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource AutoScalingGroup
 
