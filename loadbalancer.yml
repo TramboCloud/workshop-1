@@ -1,53 +1,78 @@
 Description: >
-  This template deploys a Classic Load Balancer that exposes ECS services.
+    This template deploys an Application Load Balancer that exposes ECS services.
+    It is created in a separate nested template, so it can be referenced by all of the other nested templates.
 
 Parameters:
-  EnvironmentName:
-    Type: String
 
-  VPC:
-    Type: AWS::EC2::VPC::Id
+    EnvironmentName:
+        Description: An environment name that will be prefixed to resource names
+        Type: String
 
-  PublicSubnets:
-    Type: List<AWS::EC2::Subnet::Id>
+    VPC:
+        Type: AWS::EC2::VPC::Id
+        Description: Choose which VPC the Applicaion Load Balancer should be deployed to
 
-  SecurityGroups:
-    Type: List<AWS::EC2::SecurityGroup::Id>
+    PublicSubnets:
+        Description: Choose which subnets the Applicaion Load Balancer should be deployed to
+        Type: List<AWS::EC2::Subnet::Id>
 
-  ApplicationPort:
-    Type: String
+    SecurityGroups:
+        Description: Select the Security Groups to apply to the Applicaion Load Balancer
+        Type: List<AWS::EC2::SecurityGroup::Id>
+
+    ApplicationPort:
+        Description: The port the app runs in
+        Type: String
 
 Resources:
-  LoadBalancer:
-    Type: AWS::ElasticLoadBalancing::LoadBalancer
-    Properties:
-      LoadBalancerName: !Sub public-${EnvironmentName}
-      Subnets: !Ref PublicSubnets
-      SecurityGroups: !Ref SecurityGroups
-      Scheme: internet-facing
-      Listeners:
-        - LoadBalancerPort: 80
-          InstancePort: !Ref ApplicationPort
-          Protocol: HTTP
-      HealthCheck:
-        Target: !Sub TCP:${ApplicationPort}
-        HealthyThreshold: '3'
-        UnhealthyThreshold: '5'
-        Interval: '90'
-        Timeout: '60'
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName}-lb
+
+    LoadBalancer:
+        Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+        Properties:
+            Name: !Ref EnvironmentName
+            Subnets: !Ref PublicSubnets
+            SecurityGroups: !Ref SecurityGroups
+            Tags:
+                - Key: Name
+                  Value: !Ref EnvironmentName
+
+    HttpLoadBalancerListener:
+        Type: AWS::ElasticLoadBalancingV2::Listener
+        Properties:
+            LoadBalancerArn: !Ref LoadBalancer
+            Port: 80
+            Protocol: HTTP
+            DefaultActions:
+                - Type: forward
+                  TargetGroupArn: !Ref DefaultTargetGroup
+
+    DefaultTargetGroup:
+        Type: AWS::ElasticLoadBalancingV2::TargetGroup
+        Properties:
+            Name: !Sub ${EnvironmentName}-def
+            VpcId: !Ref VPC
+            Port: !Ref ApplicationPort
+            Protocol: HTTP
+            TargetGroupAttributes:
+              - Key: deregistration_delay.timeout_seconds
+                Value: 60
+              - Key: stickiness.enabled
+                Value: true
+              - Key: stickiness.type
+                Value: lb_cookie
+              - Key: stickiness.lb_cookie.duration_seconds
+                Value: 300
 
 Outputs:
-  LoadBalancer:
-    Description: A reference to the Load Balancer
-    Value: !Ref LoadBalancer
 
-  LoadBalancerUrl:
-    Description: The URL of the LB
-    Value: !GetAtt LoadBalancer.DNSName
+    LoadBalancer:
+        Description: A reference to the Application Load Balancer
+        Value: !Ref LoadBalancer
 
-  CanonicalHostedZoneID:
-    Description: The ID of the Amazon Route 53 hosted zone associated with the load balancer
-    Value: !GetAtt LoadBalancer.CanonicalHostedZoneNameID
+    LoadBalancerUrl:
+        Description: The URL of the ALB
+        Value: !GetAtt LoadBalancer.DNSName
+
+    TargetGroupARN:
+        Description: The ARN of the target group
+        Value: !Ref DefaultTargetGroup
